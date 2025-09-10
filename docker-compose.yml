@@ -1,12 +1,46 @@
-version: "3.8"
-
 services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=lms_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+      - ./db_init/init-test-db.sh:/docker-entrypoint-initdb.d/init-test-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d lms_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build: ./laboratory-management-backend
     ports:
       - "3000:3000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD=password
+      - DB_NAME=lms_db
+      - DB_TEST_NAME=lms_test_db
+    volumes:
+      - ./laboratory-management-backend:/app
+      - /app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
 
   frontend:
     build: ./laboratory-management-frontend
     ports:
       - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
