@@ -28,6 +28,8 @@ services:
       - DB_PASSWORD=password
       - DB_NAME=lms_db
       - DB_TEST_NAME=lms_test_db
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
     volumes:
       - ./laboratory-management-backend:/app
       - /app/node_modules
