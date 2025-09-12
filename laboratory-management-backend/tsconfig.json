@@ -8,6 +8,6 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*.ts", "knexfile.ts"],
-  "exclude": ["node_modules", "tests"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "knexfile.ts", "types/**/*.ts"],
+  "exclude": ["node_modules"]
 }

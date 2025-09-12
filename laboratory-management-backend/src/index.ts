@@ -4,15 +4,8 @@ import express from 'express';
 import authRoutes from './routes/auth.routes'; // Use TypeScript import
 import cookieParser from 'cookie-parser'; // <-- Import cookie-parser
 
-if (!process.env.JWT_ACCESS_SECRET || !process.env.JWT_REFRESH_SECRET) {
-  console.error(
-    'FATAL ERROR: JWT secrets are not defined in environment variables.'
-  );
-  process.exit(1);
-}
-
 // 2. We create our server, which we'll call 'app'.
-const app = express();
+export const app = express();
 // 3. We pick a 'port' number. A port is like a specific door on your computer.
 // Our server will listen for requests at this door. 3000 is a common choice for development.
 const port = 3000;
