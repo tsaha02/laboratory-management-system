@@ -5,6 +5,7 @@ import { Request } from 'express';
 export interface JwtPayload {
   userId: number;
   email: string;
+  role: 'patient' | 'technician' | 'admin';
 }
 
 // 2. Create a new CustomRequest type that extends the Express Request

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
-import Patient from '../models/patient.model';
+import User from '../models/user.model';
 import jwt from 'jsonwebtoken';
 
 export const register = async (req: Request, res: Response) => {
@@ -10,30 +10,38 @@ export const register = async (req: Request, res: Response) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { fullName, email, password, phoneNumber } = req.body;
+  const { fullName, email, password, phoneNumber, dateOfBirth, role } =
+    req.body;
 
   try {
-    const existingPatient = await Patient.findByEmail(email);
-    if (existingPatient) {
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
       return res.status(409).json({ message: 'Email already in use.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const newPatientData = {
+    // Only allow valid roles; default to 'patient' if not provided or invalid
+    const validRoles = ['patient', 'technician', 'admin'];
+    const userRole = validRoles.includes(role) ? role : 'patient';
+
+    const newUserData = {
       full_name: fullName,
       email,
       password: hashedPassword,
       phone_number: phoneNumber,
+      date_of_birth: dateOfBirth,
+      role: userRole,
     };
-    const [createdPatient] = await Patient.create(newPatientData);
+    const [createdUser] = await User.create(newUserData);
 
     res.status(201).json({
-      message: 'Patient registered successfully!',
-      patient: {
-        id: createdPatient.id,
-        fullName: createdPatient.full_name,
-        email: createdPatient.email,
+      message: 'User registered successfully!',
+      user: {
+        id: createdUser.id,
+        fullName: createdUser.full_name,
+        email: createdUser.email,
+        role: createdUser.role,
       },
     });
   } catch (error) {
@@ -47,45 +55,50 @@ export const login = async (req: Request, res: Response) => {
 
   try {
     // 1. Find the user by email
-    const patient = await Patient.findByEmail(email);
-    if (!patient) {
-      return res.status(401).json({ message: 'Invalid credentials.' }); // 401 Unauthorized
+    const user = await User.findByEmail(email);
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
     // 2. Compare the submitted password with the stored hashed password
-    const isPasswordCorrect = await bcrypt.compare(password, patient.password);
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
     // 3. If credentials are correct, create the tokens
     const payload = {
-      userId: patient.id,
-      email: patient.email,
+      userId: user.id,
+      email: user.email,
+      role: user.role, // Include the role in the JWT payload
     };
 
-    // Create the Access Token (the "Hotel Keycard")
+    // Create the Access Token
     const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET!, {
       expiresIn: '15m',
     });
 
-    // Create the Refresh Token (the "Paper Receipt")
+    // Create the Refresh Token
     const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET!, {
       expiresIn: '7d',
     });
 
     // 4. Send the tokens to the user
-    // Send the Refresh Token in a secure, httpOnly cookie
     res.cookie('refreshToken', refreshToken, {
-      httpOnly: true, // Prevents client-side JS from accessing the cookie
-      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    // Send the Access Token in the response body
     res.status(200).json({
       message: 'Logged in successfully!',
       accessToken,
+      user: {
+        id: user.id,
+        fullName: user.full_name,
+        email: user.email,
+        role: user.role,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -94,7 +107,6 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
-  // Clear the refresh token cookie
   res.clearCookie('refreshToken');
   res.status(200).json({ message: 'Logged out successfully!' });
 };

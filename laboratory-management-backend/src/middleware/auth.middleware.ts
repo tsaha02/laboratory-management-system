@@ -1,7 +1,8 @@
 // src/middleware/auth.middleware.ts
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { CustomRequest, JwtPayload } from '../../types/express';
+
 export const protect = (
   req: CustomRequest,
   res: Response,
@@ -24,8 +25,7 @@ export const protect = (
         process.env.JWT_ACCESS_SECRET!
       ) as JwtPayload;
 
-      // We'll attach the user info to the request for other routes to use
-      // (We will fix the typescript error for this in the next step)
+      // Attach the user info to the request for downstream middleware/controllers
       req.user = decoded;
 
       // 4. If valid, pass control to the next middleware/controller
@@ -34,6 +34,7 @@ export const protect = (
       console.error(error);
       res.status(401).json({ message: 'Not authorized, token failed' });
     }
+    return; // Prevent falling through to the "no token" block
   }
 
   if (!token) {
